@@ -1,0 +1,23 @@
+{
+  "name": "qingzhuang",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "《轻装》面向租房与宿舍青年的 AI 无痕空间改造助手",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/index.js"
+  },
+  "dependencies": {
+    "browser-image-compression": "^2.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}

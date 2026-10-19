@@ -1,0 +1,15 @@
+{
+  "name": "qingzhuang-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "《轻装》代理层：持有百炼 Key，前端不暴露",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
+  }
+}

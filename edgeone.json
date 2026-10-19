@@ -1,0 +1,10 @@
+{
+  "$schema": "https://edgeone.ai/schema/edgeone.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "nodeVersion": "22",
+  "installCommand": "npm install",
+  "functions": {
+    "directory": "functions"
+  }
+}
