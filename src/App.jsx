@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react'
-import { generate } from './api.js'
+import { useState, useRef, useEffect } from 'react'
+import { generate, fetchServerInfo, DEFAULT_ESTIMATE_SEC, DEFAULT_QUALITY_OPTIONS } from './api.js'
 import ResultView from './ResultView.jsx'
 import imageCompression from 'browser-image-compression'
+import WaitHint from './WaitHint.jsx'
+import { useElapsed } from './useElapsed.js'
 
 import { STYLES, styleFull } from './stylePresets.js'
 
@@ -48,8 +50,23 @@ export default function App() {
   const [preparing, setPreparing] = useState(false) // 压缩中
   const [comp, setComp] = useState(null) // 压缩结果 {from, to, ok}
   const [camOn, setCamOn] = useState(false)
+  const [quality, setQuality] = useState('fast') // 出图质量档位：fast / fine
+  const [qOptions, setQOptions] = useState(DEFAULT_QUALITY_OPTIONS)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
+
+  // 档位列表与耗时由服务端下发（换模型时前端自动跟随），拿不到就用兜底值
+  useEffect(() => {
+    fetchServerInfo().then((info) => {
+      setQOptions(info.options)
+      setQuality(info.defaultQuality)
+    })
+  }, [])
+
+  // 当前档位对应的预计秒数：出图快慢由用户自己权衡
+  const estimate = qOptions.find((o) => o.id === quality)?.sec || DEFAULT_ESTIMATE_SEC
+
+  const elapsed = useElapsed(loading)
 
   async function openCamera() {
     setErr(null)
@@ -112,8 +129,8 @@ export default function App() {
     setLoading(true)
     setErr(null)
     try {
-      const r = await generate({ image, style, clean })
-      setResult({ ...r, style, clean, styleName: styleFull(style) })
+      const r = await generate({ image, style, clean, quality })
+      setResult({ ...r, style, clean, quality, styleName: styleFull(style) })
     } catch (e) {
       setErr('生成失败：' + e.message)
     } finally {
@@ -198,6 +215,25 @@ export default function App() {
           {STYLES.find((s) => s.id === style)?.desc}
         </p>
 
+        <h3 className="sub-h">出图质量</h3>
+        <div className="quality">
+          {qOptions.map((o) => (
+            <button
+              key={o.id}
+              className={'qcard' + (quality === o.id ? ' active' : '')}
+              onClick={() => setQuality(o.id)}
+              disabled={loading}
+            >
+              <div className="q-head">
+                <span className="q-ico">{o.emoji}</span>
+                <b>{o.label}</b>
+                <span className="q-sec">{o.sec}s</span>
+              </div>
+              <small>{o.desc}</small>
+            </button>
+          ))}
+        </div>
+
         <div className="clean-box">
           <div className="ct-left">
             <span className="ct-ico">🧹</span>
@@ -221,16 +257,26 @@ export default function App() {
             ? '开启：外卖盒、快递箱、散落电线、脏衣物等会被清掉，地面与台面恢复整洁。'
             : '关闭：仅更换软装，保留屋内原有物品，更贴近真实入住状态。'}
         </p>
+        <p className="ct-hint">
+          当前档位预计 <b>{estimate}</b> 秒出图。赶时间选「标准」，追求细节选「精细」，
+          两者户型保持与无痕约束完全一致。
+        </p>
       </section>
 
       {err && <p className="err">{err}</p>}
 
       <button className="primary big" onClick={run} disabled={loading || preparing || !image}>
-        {loading ? 'AI 生成中…' : preparing ? '图片压缩中…' : '✨ 生成改造方案'}
+        {loading ? `AI 生成中… ${elapsed}s` : preparing ? '图片压缩中…' : '✨ 生成改造方案'}
       </button>
-      <p className="hint">
-        未配置百炼 API Key 时自动进入演示模式；配置后自动调用真实 AI 生图与识别。
-      </p>
+
+      {loading && <WaitHint elapsed={elapsed} estimate={estimate} />}
+
+      {!loading && (
+        <p className="hint">
+          生成约需 {estimate} 秒（AI 绘制改造效果图较慢，请耐心等待）。
+          未配置百炼 API Key 时自动进入演示模式。
+        </p>
+      )}
     </div>
   )
 }

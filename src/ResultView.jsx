@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import SharePoster from './SharePoster.jsx'
 import BeforeAfterSlider from './BeforeAfterSlider.jsx'
-import { generate } from './api.js'
+import WaitHint from './WaitHint.jsx'
+import { generate, DEFAULT_ESTIMATE_SEC } from './api.js'
+import { useElapsed } from './useElapsed.js'
 import { styleFull } from './stylePresets.js'
 
 export default function ResultView({ result, onReset }) {
@@ -9,6 +11,7 @@ export default function ResultView({ result, onReset }) {
   const [data, setData] = useState(result)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const elapsed = useElapsed(busy)
 
   const { before, after, mock, room, list, style, clean } = data
   const total = (list || []).reduce((s, it) => s + (Number(it.price) || 0), 0)
@@ -25,9 +28,9 @@ export default function ResultView({ result, onReset }) {
     setBusy(true)
     setErr(null)
     try {
-      const r = await generate({ image: before, style, clean: nextClean })
+      const r = await generate({ image: before, style, clean: nextClean, quality: data.quality })
       if (r?.ok === false) throw new Error(r.error || '生成失败')
-      setData({ ...r, style, clean: nextClean, styleName: styleFull(style) })
+      setData({ ...r, style, clean: nextClean, quality: data.quality, styleName: styleFull(style) })
     } catch (e) {
       setErr('重新生成失败：' + e.message)
     } finally {
@@ -43,6 +46,7 @@ export default function ResultView({ result, onReset }) {
           {mock ? '演示模式（未接百炼，改造后为风格滤镜示意）' : '真实 AI 生成'} · {styleName}
           {' · '}
           {clean === false ? '保留原样' : '已清理杂物'}
+          {data.quality === 'fine' ? ' · 🎨 精细档' : ' · ⚡ 标准档'}
         </p>
       </header>
 
@@ -57,7 +61,7 @@ export default function ResultView({ result, onReset }) {
 
         <div className="regen">
           <button className="ghost" disabled={busy} onClick={() => regenerate(true)}>
-            🧹 {busy ? '重生成中…' : '清理杂物再出一版'}
+            🧹 {busy ? `重生成中… ${elapsed}s` : '清理杂物再出一版'}
           </button>
           {clean !== false && (
             <button className="ghost" disabled={busy} onClick={() => regenerate(false)}>
@@ -65,6 +69,7 @@ export default function ResultView({ result, onReset }) {
             </button>
           )}
         </div>
+        {busy && <WaitHint elapsed={elapsed} estimate={result.estimate || DEFAULT_ESTIMATE_SEC} />}
         {err && <p className="err">{err}</p>}
       </section>
 

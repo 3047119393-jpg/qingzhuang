@@ -104,12 +104,46 @@ const MOCK_LISTS = {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function generate({ image, style, clean = true }) {
+// 服务端拿不到时的兜底（对应标准档 qwen-image-2.0-pro 实测约 21s）
+export const DEFAULT_ESTIMATE_SEC = 21
+
+// 兜底档位（服务端 /api/health 会下发真实档位列表，拿不到时用这两条）
+export const DEFAULT_QUALITY_OPTIONS = [
+  { id: 'fast', label: '标准', emoji: '⚡', sec: 21, desc: '约 21 秒出图，图约 1.5MB，手机加载快' },
+  { id: 'fine', label: '精细', emoji: '🎨', sec: 45, desc: '约 45 秒出图，软装细节更足，图约 6MB' }
+]
+
+/**
+ * 取服务端信息：出图质量档位列表 + 默认档位 + 预计耗时。
+ * 失败就退回兜底常量——这只是体验优化，不能让它阻断主流程。
+ */
+export async function fetchServerInfo() {
+  try {
+    const r = await fetch('/api/health')
+    if (!r.ok) throw new Error('health not ok')
+    const j = await r.json()
+    return {
+      options: Array.isArray(j.quality_options) && j.quality_options.length
+        ? j.quality_options
+        : DEFAULT_QUALITY_OPTIONS,
+      defaultQuality: j.default_quality || 'fast',
+      estimate: Number(j.estimate_sec) || DEFAULT_ESTIMATE_SEC
+    }
+  } catch {
+    return {
+      options: DEFAULT_QUALITY_OPTIONS,
+      defaultQuality: 'fast',
+      estimate: DEFAULT_ESTIMATE_SEC
+    }
+  }
+}
+
+export async function generate({ image, style, clean = true, quality = 'fast' }) {
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image, style, clean })
+      body: JSON.stringify({ image, style, clean, quality })
     })
     if (!res.ok) throw new Error('代理服务未就绪')
     return await res.json()

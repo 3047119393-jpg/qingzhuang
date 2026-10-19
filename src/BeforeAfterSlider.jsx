@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 
 /**
  * before / after 拖拽对比滑块
@@ -17,8 +17,12 @@ export default function BeforeAfterSlider({
   afterLabel = '改造后'
 }) {
   const [pos, setPos] = useState(50)
+  const [afterErr, setAfterErr] = useState(false)
   const boxRef = useRef(null)
   const dragging = useRef(false)
+
+  // 换了新的 after 地址时重置错误态（重新生成后自动恢复显示）
+  useEffect(() => { setAfterErr(false) }, [after])
 
   const update = useCallback((clientX) => {
     const el = boxRef.current
@@ -53,11 +57,17 @@ export default function BeforeAfterSlider({
       onPointerUp={onUp}
       onPointerCancel={onUp}
     >
-      <img className="ba-img" src={after} alt={afterLabel} draggable="false" />
+      <img className="ba-img" src={after} alt={afterLabel} draggable="false" onError={() => setAfterErr(true)} />
 
       <div className="ba-clip" style={{ width: pos + '%' }}>
         <img className="ba-img" src={before} alt={beforeLabel} draggable="false" />
       </div>
+
+      {afterErr && (
+        <div className="ba-err">
+          ⚠️ 改造图加载失败，请点下方按钮重新生成
+        </div>
+      )}
 
       <div className="ba-handle" style={{ left: pos + '%' }}>
         <span className="ba-arrow">‹ ›</span>
