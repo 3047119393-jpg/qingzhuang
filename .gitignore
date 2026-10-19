@@ -7,3 +7,4 @@ server/_cache/
 _tmp/
 *.log
 .DS_Store
+webroot/
